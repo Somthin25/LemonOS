@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LemonOS - Debian Linux Environment</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts: JetBrains Mono & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gruvbox: {
+                            bg0: '#282828',
+                            bg1: '#3c3836',
+                            bg2: '#504945',
+                            bg3: '#665c54',
+                            fg0: '#fbf1c7',
+                            fg1: '#ebdbb2',
+                            red: '#cc241d',
+                            green: '#98971a',
+                            yellow: '#d79921',
+                            blue: '#458588',
+                            purple: '#b16286',
+                            aqua: '#689d6a',
+                            orange: '#d65d0e',
+                            gray: '#928374'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            overflow: hidden;
+        }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom Glassmorphism */
+        :root {
+            --glass-blur: 16px;
+            --glass-opacity: 0.85;
+        }
+        .glass-panel {
+            background: rgba(40, 40, 40, 0.75);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid rgba(235, 219, 178, 0.15);
+        }
+        .glass-window {
+            background: rgba(40, 40, 40, var(--glass-opacity));
+            backdrop-filter: blur(calc(var(--glass-blur) + 4px));
+            -webkit-backdrop-filter: blur(calc(var(--glass-blur) + 4px));
+            border: 1px solid rgba(235, 219, 178, 0.2);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(40, 40, 40, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(146, 131, 116, 0.5);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(235, 219, 178, 0.7);
+        }
+        .window-transition {
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+    </style>
+</head>
+<body id="os-body" class="bg-gruvbox-bg0 text-gruvbox-fg1 h-screen w-screen relative flex flex-col justify-between">
+
+    <!-- Desktop Wallpaper & Background Layer -->
+    <div id="desktop-wallpaper" class="absolute inset-0 bg-cover bg-center z-0 transition-all duration-300" style="background-image: linear-gradient(135deg, #282828 0%, #1d2021 100%);"></div>
+    <div id="screen-overlay" class="absolute inset-0 bg-black/10 z-0 pointer-events-none transition-opacity duration-300"></div>
+
+    <!-- TOP STATUS BAR -->
+    <header class="h-9 px-4 glass-panel z-50 flex items-center justify-between text-xs font-medium border-b border-gruvbox-bg2/40">
+        <!-- Left: Menu & App Launcher -->
+        <div class="flex items-center space-x-3">
+            <div class="relative">
+                <button onclick="toggleStartMenu()" class="flex items-center space-x-1.5 hover:bg-gruvbox-bg2/50 px-2 py-1 rounded transition text-gruvbox-yellow font-bold">
+                    <i data-lucide="terminal" class="w-4 h-4 text-gruvbox-orange"></i>
+                    <span>LemonOS</span>
+                </button>
+                <!-- START MENU -->
+                <div id="start-menu" class="absolute top-full left-0 mt-2 w-56 glass-window rounded-xl shadow-2xl hidden flex-col p-2 z-[100] space-y-1">
+                    <div class="px-2 py-1 text-gruvbox-gray font-bold text-[10px] uppercase tracking-wider">Applications</div>
+                    <button onclick="openApp('terminal'); toggleStartMenu()" class="flex items-center space-x-2 w-full px-2 py-1.5 hover:bg-gruvbox-bg2/50 rounded text-left"><i data-lucide="terminal" class="w-4 h-4 text-gruvbox-orange"></i><span>Terminal</span></button>
+                    <button onclick="openApp('browser'); toggleStartMenu()" class="flex items-center space-x-2 w-full px-2 py-1.5 hover:bg-gruvbox-bg2/50 rounded text-left"><i data-lucide="globe" class="w-4 h-4 text-gruvbox-blue"></i><span>Browser</span></button>
+                    <button onclick="openApp('files'); toggleStartMenu()" class="flex items-center space-x-2 w-full px-2 py-1.5 hover:bg-gruvbox-bg2/50 rounded text-left"><i data-lucide="folder" class="w-4 h-4 text-gruvbox-yellow"></i><span>Files</span></button>
+                    <button onclick="openApp('editor'); toggleStartMenu()" class="flex items-center space-x-2 w-full px-2 py-1.5 hover:bg-gruvbox-bg2/50 rounded text-left"><i data-lucide="file-text" class="w-4 h-4 text-gruvbox-fg1"></i><span>LemonPad</span></button>
+                    <button onclick="openApp('audio'); toggleStartMenu()" class="flex items-center space-x-2 w-full px-2 py-1.5 hover:bg-gruvbox-bg2/50 rounded text-left"><i data-lucide="music" class="w-4 h-4 text-gruvbox-aqua"></i><span>Lemon Amp</span></button>
+                    <button onclick="openApp('games'); toggleStartMenu()" class="flex items-center space-x-2 w-full px-2 py-1.5 hover:bg-gruvbox-bg2/50 rounded text-left"><i data-lucide="gamepad-2" class="w-4 h-4 text-gruvbox-green"></i><span>Games Hub</span></button>
+                    <button onclick="openApp('applauncher'); toggleStartMenu()" class="flex items-center space-x-2 w-full px-2 py-1.5 hover:bg-gruvbox-bg2/50 rounded text-left"><i data-lucide="layout-grid" class="w-4 h-4 text-gruvbox-purple"></i><span>App Directory</span></button>
+                    <div class="border-t border-gruvbox-bg2 my-1"></div>
+                    <button onclick="openApp('settings'); toggleStartMenu()" class="flex items-center space-x-2 w-full px-2 py-1.5 hover:bg-gruvbox-bg2/50 rounded text-left"><i data-lucide="settings" class="w-4 h-4 text-gruvbox-red"></i><span>Settings</span></button>
+                </div>
+            </div>
+            <span class="text-gruvbox-bg3">|</span>
+            <span id="top-active-app" class="text-gruvbox-fg0 font-semibold">Desktop</span>
+            <span class="text-gruvbox-bg3">|</span>
+            <button onclick="openApp('applauncher')" class="hover:bg-gruvbox-bg2/50 px-2 py-1 rounded transition text-gruvbox-aqua">Applications</button>
+            <button onclick="openApp('games')" class="hover:bg-gruvbox-bg2/50 px-2 py-1 rounded transition text-gruvbox-green">Games Hub</button>
+            <button onclick="openApp('settings')" class="hover:bg-gruvbox-bg2/50 px-2 py-1 rounded transition text-gruvbox-fg1">Settings</button>
+        </div>
+
+        <!-- Center: Live Clock -->
+        <div class="flex items-center space-x-2 text-gruvbox-fg0 font-mono">
+            <span id="top-clock">--:--</span>
+        </div>
+
+        <!-- Right: Control Center, AI, Status -->
+        <div class="flex items-center space-x-3">
+            <button onclick="openApp('ai')" class="flex items-center space-x-1 bg-gruvbox-orange/20 border border-gruvbox-orange/40 text-gruvbox-orange px-2 py-0.5 rounded hover:bg-gruvbox-orange/30 transition">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                <span class="font-bold">LemonAI</span>
+            </button>
+            <div class="flex items-center space-x-2 bg-gruvbox-bg1/60 px-2.5 py-1 rounded border border-gruvbox-bg2">
+                <button onclick="toggleWifi()" id="status-wifi" title="Toggle Wi-Fi" class="text-gruvbox-green hover:opacity-80 transition"><i data-lucide="wifi" class="w-3.5 h-3.5"></i></button>
+                <button onclick="toggleSound()" id="status-sound" title="Toggle Mute" class="text-gruvbox-aqua hover:opacity-80 transition"><i data-lucide="volume-2" class="w-3.5 h-3.5"></i></button>
+                <span id="status-battery" class="text-gruvbox-yellow flex items-center space-x-1"><i data-lucide="battery" class="w-3.5 h-3.5"></i> 94%</span>
+            </div>
+            <button onclick="openApp('settings')" class="hover:bg-gruvbox-bg2/50 p-1 rounded transition"><i data-lucide="settings" class="w-4 h-4 text-gruvbox-fg1"></i></button>
+        </div>
+    </header>
+
+    <!-- MAIN DESKTOP WORKSPACE -->
+    <main id="desktop-workspace" class="flex-1 relative overflow-hidden z-10 p-4">
+        <!-- Desktop Shortcuts Grid -->
+        <div class="grid grid-flow-col grid-rows-6 gap-4 w-fit h-full">
+            <div onclick="openApp('terminal')" class="flex flex-col items-center justify-center w-20 h-20 rounded-lg hover:bg-gruvbox-bg1/40 cursor-pointer group transition p-1">
+                <div class="w-12 h-12 rounded-xl bg-gruvbox-bg1 border border-gruvbox-bg2 flex items-center justify-center shadow group-hover:border-gruvbox-orange transition"><i data-lucide="terminal" class="w-6 h-6 text-gruvbox-orange"></i></div>
+                <span class="text-xs mt-1 text-gruvbox-fg0 font-medium drop-shadow">Terminal</span>
+            </div>
+            <div onclick="openApp('browser')" class="flex flex-col items-center justify-center w-20 h-20 rounded-lg hover:bg-gruvbox-bg1/40 cursor-pointer group transition p-1">
+                <div class="w-12 h-12 rounded-xl bg-gruvbox-bg1 border border-gruvbox-bg2 flex items-center justify-center shadow group-hover:border-gruvbox-blue transition"><i data-lucide="globe" class="w-6 h-6 text-gruvbox-blue"></i></div>
+                <span class="text-xs mt-1 text-gruvbox-fg0 font-medium drop-shadow">Browser</span>
+            </div>
+            <div onclick="openApp('files')" class="flex flex-col items-center justify-center w-20 h-20 rounded-lg hover:bg-gruvbox-bg1/40 cursor-pointer group transition p-1">
+                <div class="w-12 h-12 rounded-xl bg-gruvbox-bg1 border border-gruvbox-bg2 flex items-center justify-center shadow group-hover:border-gruvbox-yellow transition"><i data-lucide="folder" class="w-6 h-6 text-gruvbox-yellow"></i></div>
+                <span class="text-xs mt-1 text-gruvbox-fg0 font-medium drop-shadow">Files</span>
+            </div>
+            <div onclick="openApp('audio')" class="flex flex-col items-center justify-center w-20 h-20 rounded-lg hover:bg-gruvbox-bg1/40 cursor-pointer group transition p-1">
+                <div class="w-12 h-12 rounded-xl bg-gruvbox-bg1 border border-gruvbox-bg2 flex items-center justify-center shadow group-hover:border-gruvbox-aqua transition"><i data-lucide="music" class="w-6 h-6 text-gruvbox-aqua"></i></div>
+                <span class="text-xs mt-1 text-gruvbox-fg0 font-medium drop-shadow">Lemon Amp</span>
+            </div>
+            <div onclick="openApp('games')" class="flex flex-col items-center justify-center w-20 h-20 rounded-lg hover:bg-gruvbox-bg1/40 cursor-pointer group transition p-1">
+                <div class="w-12 h-12 rounded-xl bg-gruvbox-bg1 border border-gruvbox-bg2 flex items-center justify-center shadow group-hover:border-gruvbox-green transition"><i data-lucide="gamepad-2" class="w-6 h-6 text-gruvbox-green"></i></div>
+                <span class="text-xs mt-1 text-gruvbox-fg0 font-medium drop-shadow">Games Hub</span>
+            </div>
+            <div onclick="openApp('applauncher')" class="flex flex-col items-center justify-center w-20 h-20 rounded-lg hover:bg-gruvbox-bg1/40 cursor-pointer group transition p-1">
+                <div class="w-12 h-12 rounded-xl bg-gruvbox-bg1 border border-gruvbox-bg2 flex items-center justify-center shadow group-hover:border-gruvbox-purple transition"><i data-lucide="layout-grid" class="w-6 h-6 text-gruvbox-purple"></i></div>
+                <span class="text-xs mt-1 text-gruvbox-fg0 font-medium drop-shadow">App Store</span>
+            </div>
+            <div onclick="openApp('settings')" class="flex flex-col items-center justify-center w-20 h-20 rounded-lg hover:bg-gruvbox-bg1/40 cursor-pointer group transition p-1">
+                <div class="w-12 h-12 rounded-xl bg-gruvbox-bg1 border border-gruvbox-bg2 flex items-center justify-center shadow group-hover:border-gruvbox-red transition"><i data-lucide="settings" class="w-6 h-6 text-gruvbox-red"></i></div>
+                <span class="text-xs mt-1 text-gruvbox-fg0 font-medium drop-shadow">Settings</span>
+            </div>
+        </div>
+
+        <!-- WINDOW CONTAINER -->
+        <div id="window-container" class="absolute inset-0 pointer-events-none"></div>
+    </main>
+
+    <!-- BOTTOM DOCK -->
+    <nav class="h-16 px-4 pb-2 z-50 flex items-center justify-center pointer-events-none">
+        <div id="dock-bar" class="glass-panel px-3 py-2 rounded-2xl flex items-center space-x-3 pointer-events-auto shadow-2xl border border-gruvbox-bg2/60">
+            <button onclick="openApp('terminal')" class="relative group p-2 hover:bg-gruvbox-bg2/40 rounded-xl transition transform hover:-translate-y-2" title="Terminal">
+                <i data-lucide="terminal" class="w-7 h-7 text-gruvbox-orange"></i><span id="indicator-terminal" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gruvbox-orange hidden"></span>
+            </button>
+            <button onclick="openApp('browser')" class="relative group p-2 hover:bg-gruvbox-bg2/40 rounded-xl transition transform hover:-translate-y-2" title="Browser">
+                <i data-lucide="globe" class="w-7 h-7 text-gruvbox-blue"></i><span id="indicator-browser" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gruvbox-blue hidden"></span>
+            </button>
+            <button onclick="openApp('files')" class="relative group p-2 hover:bg-gruvbox-bg2/40 rounded-xl transition transform hover:-translate-y-2" title="Files">
+                <i data-lucide="folder" class="w-7 h-7 text-gruvbox-yellow"></i><span id="indicator-files" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gruvbox-yellow hidden"></span>
+            </button>
+            <button onclick="openApp('editor')" class="relative group p-2 hover:bg-gruvbox-bg2/40 rounded-xl transition transform hover:-translate-y-2" title="LemonPad">
+                <i data-lucide="file-text" class="w-7 h-7 text-gruvbox-fg1"></i><span id="indicator-editor" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gruvbox-fg1 hidden"></span>
+            </button>
+            <button onclick="openApp('audio')" class="relative group p-2 hover:bg-gruvbox-bg2/40 rounded-xl transition transform hover:-translate-y-2" title="Lemon Amp">
+                <i data-lucide="music" class="w-7 h-7 text-gruvbox-aqua"></i><span id="indicator-audio" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gruvbox-aqua hidden"></span>
+            </button>
+            <button onclick="openApp('games')" class="relative group p-2 hover:bg-gruvbox-bg2/40 rounded-xl transition transform hover:-translate-y-2" title="Games Hub">
+                <i data-lucide="gamepad-2" class="w-7 h-7 text-gruvbox-green"></i><span id="indicator-games" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gruvbox-green hidden"></span>
+            </button>
+            <button onclick="openApp('applauncher')" class="relative group p-2 hover:bg-gruvbox-bg2/40 rounded-xl transition transform hover:-translate-y-2" title="App Directory">
+                <i data-lucide="layout-grid" class="w-7 h-7 text-gruvbox-purple"></i><span id="indicator-applauncher" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gruvbox-purple hidden"></span>
+            </button>
+            <button onclick="openApp('tiling')" class="relative group p-2 hover:bg-gruvbox-bg2/40 rounded-xl transition transform hover:-translate-y-2" title="Tiling Manager">
+                <i data-lucide="columns" class="w-7 h-7 text-gruvbox-orange"></i><span id="indicator-tiling" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gruvbox-orange hidden"></span>
+            </button>
+            <button onclick="openApp('settings')" class="relative group p-2 hover:bg-gruvbox-bg2/40 rounded-xl transition transform hover:-translate-y-2" title="Settings">
+                <i data-lucide="settings" class="w-7 h-7 text-gruvbox-red"></i><span id="indicator-settings" class="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-gruvbox-red hidden"></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- JAVASCRIPT OS ENGINE -->
+    <script>
+        // System State
+        let windows = {};
+        let activeWindowId = null;
+        let zIndexCounter = 100;
+        let currentTheme = 'gruvbox-dark';
+        let tilingMode = 'grid'; // grid, stack, columns
+        let wifiEnabled = true;
+        let soundMuted = false;
+
+        const appSpecs = {
+            terminal: { title: 'Terminal', icon: 'terminal', width: 700, height: 450 },
+            browser: { title: 'Lemon Browser', icon: 'globe', width: 900, height: 600 },
+            files: { title: 'File Manager', icon: 'folder', width: 750, height: 480 },
+            editor: { title: 'LemonPad - Text Editor', icon: 'file-text', width: 700, height: 450 },
+            audio: { title: 'Lemon Amp', icon: 'music', width: 620, height: 480 },
+            games: { title: 'Lemon Arcade & Games Hub', icon: 'gamepad-2', width: 800, height: 560 },
+            applauncher: { title: 'Application Directory', icon: 'layout-grid', width: 750, height: 520 },
+            tiling: { title: 'Tiling Manager', icon: 'columns', width: 600, height: 420 },
+            settings: { title: 'System Settings', icon: 'settings', width: 720, height: 500 },
+            ai: { title: 'LemonAI Assistant', icon: 'sparkles', width: 650, height: 500 },
+            calculator: { title: 'Calculator', icon: 'calculator', width: 340, height: 460 },
+            monitor: { title: 'System Monitor', icon: 'activity', width: 650, height: 420 }
+        };
+
+        // Advanced Virtual File System
+        let vfs = {
+            '/': { type: 'dir', children: ['home', 'var', 'etc'] },
+            '/var': { type: 'dir', children: [] },
+            '/etc': { type: 'dir', children: [] },
+            '/home': { type: 'dir', children: ['debian'] },
+            '/home/debian': { type: 'dir', children: ['Documents', 'Music', 'Downloads', 'notes.txt'] },
+            '/home/debian/Documents': { type: 'dir', children: ['welcome.txt', 'roadmap.md'] },
+            '/home/debian/Music': { type: 'dir', children: ['citrus_groove.mp3'] },
+            '/home/debian/Downloads': { type: 'dir', children: [] },
+            '/home/debian/notes.txt': { type: 'file', content: 'Welcome to LemonOS!\nA clean Debian Linux environment with tiling window management, CAVA audio visualizer, and custom themes.' },
+            '/home/debian/Documents/welcome.txt': { type: 'file', content: 'LemonOS is fully interactive. Use the terminal, browse the web, or play arcade games.' },
+            '/home/debian/Documents/roadmap.md': { type: 'file', content: '# LemonOS Roadmap\n- [x] Window Tiling\n- [x] CAVA Audio Visualizer\n- [x] Package Manager\n- [x] Games Hub' }
+        };
+
+        let installedPackages = ['lemon-wm', 'cava', 'bash', 'coreutils'];
+
+        function initOS() {
+            lucide.createIcons();
+            setInterval(updateClock, 1000);
+            updateClock();
+            
+            setTimeout(() => {
+                openApp('terminal');
+            }, 300);
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const options = { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            document.getElementById('top-clock').innerText = now.toLocaleDateString('en-US', options);
+        }
+
+        function toggleWifi() {
+            wifiEnabled = !wifiEnabled;
+            const btn = document.getElementById('status-wifi');
+            btn.className = wifiEnabled ? 'text-gruvbox-green hover:opacity-80 transition' : 'text-gruvbox-red hover:opacity-80 transition';
+        }
+
+        function toggleSound() {
+            soundMuted = !soundMuted;
+            const btn = document.getElementById('status-sound');
+            btn.className = soundMuted ? 'text-gruvbox-red hover:opacity-80 transition' : 'text-gruvbox-aqua hover:opacity-80 transition';
+        }
+
+        // --- Window Management ---
+        function openApp(appKey) {
+            if (!appSpecs[appKey]) return;
+            
+            // Focus if already open
+            for (let id in windows) {
+                if (windows[id].appKey === appKey) {
+                    focusWindow(id);
+                    return;
+                }
+            }
+
+            const winId = 'win-' + Math.random().toString(36).substr(2, 9);
+            const spec = appSpecs[appKey];
+            
+            zIndexCounter++;
+            const x = Math.max(20, (window.innerWidth - spec.width) / 2 + (Object.keys(windows).length * 20));
+            const y = Math.max(50, (window.innerHeight - spec.height) / 2 + (Object.keys(windows).length * 20));
+
+            windows[winId] = {
+                id: winId,
+                appKey: appKey,
+                title: spec.title,
+                icon: spec.icon,
+                x: x,
+                y: y,
+                width: spec.width,
+                height: spec.height,
+                minimized: false,
+                maximized: false,
+                zIndex: zIndexCounter,
+                cwd: '/home/debian' // Terminal specific state
+            };
+
+            renderWindow(winId);
+            focusWindow(winId);
+            updateDockIndicators();
+            recalculateTiling();
+
+            // Run app init callbacks
+            setTimeout(() => {
+                if (appKey === 'terminal') initTerminal(winId);
+                if (appKey === 'audio') initAudioPlayer(winId);
+                if (appKey === 'files') navigateFiles(winId, '/home/debian');
+            }, 50);
+        }
+
+        function renderWindow(winId) {
+            const w = windows[winId];
+            const container = document.getElementById('window-container');
+            
+            const winEl = document.createElement('div');
+            winEl.id = winId;
+            winEl.className = `absolute glass-window rounded-xl flex flex-col overflow-hidden shadow-2xl pointer-events-auto window-transition`;
+            winEl.style.width = w.width + 'px';
+            winEl.style.height = w.height + 'px';
+            winEl.style.left = w.x + 'px';
+            winEl.style.top = w.y + 'px';
+            winEl.style.zIndex = w.zIndex;
+
+            winEl.innerHTML = `
+                <div class="h-9 bg-gruvbox-bg1/80 border-b border-gruvbox-bg2 flex items-center justify-between px-3 cursor-move" onmousedown="startDrag(event, '${winId}')">
+                    <div class="flex items-center space-x-2">
+                        <button onclick="closeWindow('${winId}')" class="w-3 h-3 rounded-full bg-gruvbox-red hover:opacity-80 transition"></button>
+                        <button onclick="minimizeWindow('${winId}')" class="w-3 h-3 rounded-full bg-gruvbox-yellow hover:opacity-80 transition"></button>
+                        <button onclick="maximizeWindow('${winId}')" class="w-3 h-3 rounded-full bg-gruvbox-green hover:opacity-80 transition"></button>
+                    </div>
+                    <div class="flex items-center space-x-2 text-xs font-semibold text-gruvbox-fg0">
+                        <i data-lucide="${w.icon}" class="w-3.5 h-3.5 text-gruvbox-orange"></i>
+                        <span>${w.title}</span>
+                    </div>
+                    <div class="w-12"></div>
+                </div>
+                <div class="flex-1 overflow-auto bg-gruvbox-bg0/90 text-gruvbox-fg1 relative flex flex-col" id="body-${winId}">
+                    ${getAppHTML(w.appKey, winId)}
+                </div>
+            `;
+
+            container.appendChild(winEl);
+            lucide.createIcons();
+            winEl.addEventListener('mousedown', () => focusWindow(winId));
+        }
+
+        function focusWindow(winId) {
+            if (!windows[winId]) return;
+            zIndexCounter++;
+            windows[winId].zIndex = zIndexCounter;
+            const el = document.getElementById(winId);
+            if (el) {
+                el.style.zIndex = zIndexCounter;
+                el.classList.remove('opacity-9ulating');
+            }
+            activeWindowId = winId;
+            document.getElementById('top-active-app').innerText = windows[winId].title;
+        }
+
+        function closeWindow(winId) {
+            const el = document.getElementById(winId);
+            if (el) el.remove();
+            delete windows[winId];
+            updateDockIndicators();
+            recalculateTiling();
+        }
+
+        function minimizeWindow(winId) {
+            const el = document.getElementById(winId);
+            if (el) {
+                el.style.transform = 'scale(0.8) translateY(100px)';
+                el.style.opacity = '0';
+                setTimeout(() => el.style.display = 'none', 150);
+            }
+        }
+
+        function maximizeWindow(winId) {
+            const w = windows[winId];
+            const el = document.getElementById(winId);
+            if (!w || !el) return;
+
+            if (!w.maximized) {
+                w.prevBox = { x: w.x, y: w.y, width: w.width, height: w.height };
+                el.style.left = '0px';
+                el.style.top = '36px';
+                el.style.width = window.innerWidth + 'px';
+                el.style.height = (window.innerHeight - 36 - 64) + 'px';
+                w.maximized = true;
+            } else {
+                el.style.left = w.prevBox.x + 'px';
+                el.style.top = w.prevBox.y + 'px';
+                el.style.width = w.prevBox.width + 'px';
+                el.style.height = w.prevBox.height + 'px';
+                w.maximized = false;
+            }
+        }
+
+        function updateDockIndicators() {
+            const activeKeys = new Set(Object.values(windows).map(w => w.appKey));
+            ['terminal', 'browser', 'files', 'editor', 'audio', 'games', 'applauncher', 'tiling', 'settings'].forEach(key => {
+                const ind = document.getElementById(`indicator-${key}`);
+                if (ind) ind.classList.toggle('hidden', !activeKeys.has(key));
+            });
+        }
+
+        let draggingWindow = null;
+        let dragOffset = { x: 0, y: 0 };
+
+        function startDrag(e, winId) {
+            if (e.target.tagName === 'BUTTON') return;
+            focusWindow(winId);
+            draggingWindow = winId;
+            const el = document.getElementById(winId);
+            const rect = el.getBoundingClientRect();
+            dragOffset.x = e.clientX - rect.left;
+            dragOffset.y = e.clientY - rect.top;
+
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', stopDrag);
+        }
+
+        function onDrag(e) {
+            if (!draggingWindow) return;
+            const el = document.getElementById(draggingWindow);
+            const w = windows[draggingWindow];
+            w.x = Math.max(0, Math.min(window.innerWidth - 100, e.clientX - dragOffset.x));
+            w.y = Math.max(36, Math.min(window.innerHeight - 100, e.clientY - dragOffset.y));
+            el.style.left = w.x + 'px';
+            el.style.top = w.y + 'px';
+        }
+
+        function stopDrag() {
+            draggingWindow = null;
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        // --- Window Tiling Manager ---
+        function toggleTilingMode(mode) {
+            tilingMode = mode;
+            recalculateTiling();
+        }
+
+        function recalculateTiling() {
+            const winIds = Object.keys(windows).filter(id => !windows[id].minimized);
+            if (winIds.length === 0) return;
+
+            const availWidth = window.innerWidth - 16;
+            const availHeight = window.innerHeight - 36 - 72;
+
+            if (tilingMode === 'grid') {
+                const cols = Math.ceil(Math.sqrt(winIds.length));
+                const rows = Math.ceil(winIds.length / cols);
+                const w = availWidth / cols;
+                const h = availHeight / rows;
+
+                winIds.forEach((id, idx) => {
+                    const win = windows[id];
+                    const r = Math.floor(idx / cols);
+                    const c = idx % cols;
+                    win.x = 8 + c * w;
+                    win.y = 36 + r * h;
+                    win.width = w - 8;
+                    win.height = h - 8;
+                    applyWinGeometry(id);
+                });
+            } else if (tilingMode === 'columns') {
+                const w = availWidth / winIds.length;
+                winIds.forEach((id, idx) => {
+                    const win = windows[id];
+                    win.x = 8 + idx * w;
+                    win.y = 36;
+                    win.width = w - 8;
+                    win.height = availHeight;
+                    applyWinGeometry(id);
+                });
+            }
+        }
+
+        function applyWinGeometry(winId) {
+            const el = document.getElementById(winId);
+            const w = windows[winId];
+            if (!el || !w) return;
+            el.style.left = w.x + 'px';
+            el.style.top = w.y + 'px';
+            el.style.width = w.width + 'px';
+            el.style.height = w.height + 'px';
+        }
+
+        // --- App Generators ---
+        function getAppHTML(appKey, winId) {
+            switch(appKey) {
+                case 'terminal':
+                    return `
+                        <div class="flex-1 p-3 font-mono text-xs overflow-y-auto flex flex-col justify-between" id="term-box-${winId}" onclick="document.getElementById('term-input-${winId}').focus()">
+                            <div id="term-output-${winId}" class="space-y-1">
+                                <p class="text-gruvbox-orange font-bold">Debian GNU/Linux 12 (bookworm) - LemonOS tty1</p>
+                                <p class="text-gruvbox-gray">Type 'help' for commands. Try 'apt install' or navigating with 'cd' and 'ls'.</p><br>
+                            </div>
+                            <div class="flex items-center space-x-2 mt-2">
+                                <span class="text-gruvbox-green font-bold">debian@lemonos:<span id="term-cwd-${winId}">~</span>$</span>
+                                <input type="text" id="term-input-${winId}" class="flex-1 bg-transparent border-none outline-none text-gruvbox-fg0 font-mono text-xs" onkeydown="handleTerminalKey(event, '${winId}')">
+                            </div>
+                        </div>
+                    `;
+                case 'browser':
+                    return `
+                        <div class="flex flex-col h-full bg-[#f4f1ea] text-black">
+                            <div class="flex items-center space-x-3 p-2 border-b border-gray-300 bg-[#e8e4db]">
+                                <button class="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center hover:bg-gray-800" title="Settings"><i data-lucide="settings" class="w-4 h-4"></i></button>
+                                <button class="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center hover:bg-gray-800" title="Proxy/DNS Settings"><i data-lucide="shield-check" class="w-4 h-4"></i></button>
+                                <div class="flex-1 flex items-center border-2 border-black bg-white px-2 py-1 space-x-2">
+                                    <i data-lucide="search" class="w-4 h-4 text-gray-500"></i>
+                                    <input type="text" id="browser-url-${winId}" value="https://example.com" onkeydown="if(event.key==='Enter') navigateBrowser('${winId}')" class="flex-1 outline-none text-sm font-mono bg-transparent">
+                                </div>
+                                <button class="bg-black text-white text-xs font-bold px-3 py-1.5 hover:bg-gray-800 rounded">VPN ON</button>
+                            </div>
+                            <div class="flex-1 relative bg-white">
+                                <iframe id="browser-iframe-${winId}" src="https://example.com" class="absolute inset-0 w-full h-full border-none z-0"></iframe>
+                            </div>
+                        </div>
+                    `;
+                case 'files':
+                    return `
+                        <div class="flex h-full">
+                            <div class="w-48 bg-gruvbox-bg1/60 border-r border-gruvbox-bg2 p-2 space-y-1 text-xs">
+                                <div onclick="navigateFiles('${winId}', '/home/debian')" class="flex items-center space-x-2 px-2 py-1.5 rounded hover:bg-gruvbox-bg2 cursor-pointer font-medium text-gruvbox-yellow"><i data-lucide="home" class="w-3.5 h-3.5"></i><span>Home</span></div>
+                                <div onclick="navigateFiles('${winId}', '/home/debian/Documents')" class="flex items-center space-x-2 px-2 py-1.5 rounded hover:bg-gruvbox-bg2 cursor-pointer font-medium text-gruvbox-aqua"><i data-lucide="folder" class="w-3.5 h-3.5"></i><span>Documents</span></div>
+                                <div onclick="navigateFiles('${winId}', '/home/debian/Music')" class="flex items-center space-x-2 px-2 py-1.5 rounded hover:bg-gruvbox-bg2 cursor-pointer font-medium text-gruvbox-green"><i data-lucide="music" class="w-3.5 h-3.5"></i><span>Music</span></div>
+                                <div onclick="navigateFiles('${winId}', '/home/debian/Downloads')" class="flex items-center space-x-2 px-2 py-1.5 rounded hover:bg-gruvbox-bg2 cursor-pointer font-medium text-gruvbox-blue"><i data-lucide="download" class="w-3.5 h-3.5"></i><span>Downloads</span></div>
+                            </div>
+                            <div class="flex-1 flex flex-col">
+                                <div class="p-2 bg-gruvbox-bg1/30 border-b border-gruvbox-bg2 text-xs font-mono text-gruvbox-gray" id="path-bar-${winId}">/home/debian</div>
+                                <div class="flex-1 p-4 grid grid-cols-4 gap-4 content-start" id="file-grid-${winId}"></div>
+                            </div>
+                        </div>
+                    `;
+                case 'editor':
+                    return `
+                        <div class="flex flex-col h-full">
+                            <div class="bg-gruvbox-bg1 p-2 border-b border-gruvbox-bg2 flex items-center justify-between text-xs">
+                                <span class="font-mono text-gruvbox-yellow" id="editor-filename-${winId}">notes.txt</span>
+                                <button onclick="alert('File saved successfully!')" class="bg-gruvbox-green/20 text-gruvbox-green border border-gruvbox-green/40 px-3 py-1 rounded font-semibold hover:bg-gruvbox-green/30">Save File</button>
+                            </div>
+                            <textarea id="editor-textarea-${winId}" class="flex-1 bg-gruvbox-bg0 p-4 font-mono text-xs text-gruvbox-fg0 outline-none resize-none">Welcome to LemonOS!
+A clean Debian Linux environment with tiling window management, CAVA audio visualizer, and custom themes.</textarea>
+                        </div>
+                    `;
+                case 'audio':
+                    return `
+                        <div class="flex h-full p-4 justify-between bg-gradient-to-b from-gruvbox-bg1 to-gruvbox-bg0 space-x-4">
+                            <!-- Left Panel -->
+                            <div class="w-1/3 flex flex-col items-center justify-between border-r border-gruvbox-bg2 pr-4">
+                                <div class="w-32 h-32 rounded-lg bg-gruvbox-bg2 border border-gruvbox-aqua flex items-center justify-center shadow-lg relative overflow-hidden mt-2">
+                                    <i data-lucide="disc" class="w-16 h-16 text-gruvbox-aqua animate-spin" style="animation-duration: 4s;"></i>
+                                </div>
+                                <div class="text-center mt-2 space-y-1">
+                                    <h3 class="text-base font-bold text-gruvbox-fg0">Citrus Synth</h3>
+                                    <p class="text-xs text-gruvbox-gray">LemonOS Daemon</p>
+                                </div>
+                                <div class="flex items-center space-x-4 mt-2">
+                                    <button class="text-gruvbox-fg1 hover:text-gruvbox-aqua"><i data-lucide="skip-back" class="w-6 h-6"></i></button>
+                                    <button onclick="toggleAudioPlay()" id="audio-play-btn" class="w-12 h-12 rounded-full bg-gruvbox-aqua text-gruvbox-bg0 flex items-center justify-center shadow-lg hover:scale-105 transition"><i data-lucide="play" class="w-6 h-6 fill-current"></i></button>
+                                    <button class="text-gruvbox-fg1 hover:text-gruvbox-aqua"><i data-lucide="skip-forward" class="w-6 h-6"></i></button>
+                                </div>
+                                <label class="cursor-pointer bg-gruvbox-aqua/20 text-gruvbox-aqua border border-gruvbox-aqua/40 px-3 py-1.5 rounded text-xs font-medium hover:bg-gruvbox-aqua/30 transition mt-4 w-full text-center">
+                                    <i data-lucide="upload" class="w-3 h-3 inline mr-1"></i> Upload MP3/FLAC
+                                    <input type="file" accept="audio/*" class="hidden" onchange="handleAudioUpload(event)">
+                                </label>
+                            </div>
+                            <!-- Right Panel -->
+                            <div class="w-2/3 flex flex-col space-y-4">
+                                <div class="h-1/3 bg-gruvbox-bg2/30 rounded-xl p-3 border border-gruvbox-bg2 flex flex-col">
+                                    <h4 class="text-xs font-bold text-gruvbox-gray mb-2 text-center">9-Band Graphical Equalizer</h4>
+                                    <div class="flex-1 flex justify-between items-end px-2">
+                                        ${[32,64,125,250,500,'1k','2k','4k','16k'].map(f => `
+                                        <div class="flex flex-col items-center w-6">
+                                            <input type="range" min="-12" max="12" value="0" class="h-12 w-1 appearance-none bg-gruvbox-bg3 rounded outline-none" style="writing-mode: vertical-lr; direction: rtl;">
+                                            <span class="text-[9px] text-gruvbox-gray mt-1">${f}</span>
+                                        </div>`).join('')}
+                                    </div>
+                                </div>
+                                <div class="h-2/3 bg-black rounded-xl p-3 border border-gruvbox-bg2 flex flex-col relative overflow-hidden">
+                                    <h4 class="text-xs font-bold text-gruvbox-gray mb-1 text-center relative z-10">CAVA Visualizer</h4>
+                                    <div class="flex-1 flex items-end justify-between space-x-[2px] z-10" id="cava-visualizer">
+                                        <!-- Bars generated by JS -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                case 'games':
+                    return `
+                        <div class="flex flex-col h-full p-4 space-y-4 overflow-y-auto">
+                            <div class="flex items-center justify-between">
+                                <h2 class="text-base font-bold text-gruvbox-green flex items-center space-x-2">
+                                    <i data-lucide="gamepad-2" class="w-5 h-5"></i>
+                                    <span>Lemon Arcade & Games Hub</span>
+                                </h2>
+                                <span class="text-xs bg-gruvbox-green/20 text-gruvbox-green border border-gruvbox-green/40 px-2.5 py-1 rounded font-medium">4 Games Available</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div onclick="launchGame('jetpack')" class="bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-green p-4 rounded-xl cursor-pointer transition group">
+                                    <div class="w-10 h-10 rounded-lg bg-gruvbox-green/20 flex items-center justify-center text-gruvbox-green mb-2 group-hover:scale-110 transition"><i data-lucide="rocket" class="w-6 h-6"></i></div>
+                                    <h3 class="font-bold text-gruvbox-fg0 text-sm">Lemon Jetpack</h3>
+                                    <p class="text-xs text-gruvbox-gray mt-1">Side-scrolling jetpack runner with physics.</p>
+                                </div>
+                                <div onclick="launchGame('angry')" class="bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-yellow p-4 rounded-xl cursor-pointer transition group">
+                                    <div class="w-10 h-10 rounded-lg bg-gruvbox-yellow/20 flex items-center justify-center text-gruvbox-yellow mb-2 group-hover:scale-110 transition"><i data-lucide="target" class="w-6 h-6"></i></div>
+                                    <h3 class="font-bold text-gruvbox-fg0 text-sm">Angry Lemons</h3>
+                                    <p class="text-xs text-gruvbox-gray mt-1">Slingshot physics puzzle game.</p>
+                                </div>
+                                <div onclick="launchGame('pong')" class="bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-aqua p-4 rounded-xl cursor-pointer transition group">
+                                    <div class="w-10 h-10 rounded-lg bg-gruvbox-aqua/20 flex items-center justify-center text-gruvbox-aqua mb-2 group-hover:scale-110 transition"><i data-lucide="play" class="w-6 h-6"></i></div>
+                                    <h3 class="font-bold text-gruvbox-fg0 text-sm">Retro Pong</h3>
+                                    <p class="text-xs text-gruvbox-gray mt-1">Classic arcade paddle tennis against AI.</p>
+                                </div>
+                                <div onclick="launchGame('snake')" class="bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-orange p-4 rounded-xl cursor-pointer transition group">
+                                    <div class="w-10 h-10 rounded-lg bg-gruvbox-orange/20 flex items-center justify-center text-gruvbox-orange mb-2 group-hover:scale-110 transition"><i data-lucide="activity" class="w-6 h-6"></i></div>
+                                    <h3 class="font-bold text-gruvbox-fg0 text-sm">Snake CLI</h3>
+                                    <p class="text-xs text-gruvbox-gray mt-1">Terminal snake game with retro high-score.</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                case 'applauncher':
+                    return `
+                        <div class="flex flex-col h-full p-6 space-y-4 overflow-y-auto">
+                            <div class="flex items-center justify-between">
+                                <h2 class="text-base font-bold text-gruvbox-purple flex items-center space-x-2">
+                                    <i data-lucide="layout-grid" class="w-5 h-5"></i>
+                                    <span>Application Directory & Package Center</span>
+                                </h2>
+                                <input type="text" placeholder="Search apps..." class="bg-gruvbox-bg1 border border-gruvbox-bg2 px-3 py-1 rounded text-xs text-gruvbox-fg0 outline-none">
+                            </div>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div onclick="openApp('terminal')" class="bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-orange p-4 rounded-xl cursor-pointer transition flex items-center space-x-3">
+                                    <div class="p-3 bg-gruvbox-orange/20 text-gruvbox-orange rounded-lg"><i data-lucide="terminal" class="w-6 h-6"></i></div>
+                                    <div><h4 class="font-bold text-xs text-gruvbox-fg0">Terminal</h4><p class="text-[10px] text-gruvbox-gray">Debian Shell</p></div>
+                                </div>
+                                <div onclick="openApp('browser')" class="bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-blue p-4 rounded-xl cursor-pointer transition flex items-center space-x-3">
+                                    <div class="p-3 bg-gruvbox-blue/20 text-gruvbox-blue rounded-lg"><i data-lucide="globe" class="w-6 h-6"></i></div>
+                                    <div><h4 class="font-bold text-xs text-gruvbox-fg0">Browser</h4><p class="text-[10px] text-gruvbox-gray">Web Engine</p></div>
+                                </div>
+                                <div onclick="openApp('files')" class="bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-yellow p-4 rounded-xl cursor-pointer transition flex items-center space-x-3">
+                                    <div class="p-3 bg-gruvbox-yellow/20 text-gruvbox-yellow rounded-lg"><i data-lucide="folder" class="w-6 h-6"></i></div>
+                                    <div><h4 class="font-bold text-xs text-gruvbox-fg0">Files</h4><p class="text-[10px] text-gruvbox-gray">File Manager</p></div>
+                                </div>
+                                <div onclick="openApp('editor')" class="bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-fg1 p-4 rounded-xl cursor-pointer transition flex items-center space-x-3">
+                                    <div class="p-3 bg-gruvbox-fg1/20 text-gruvbox-fg1 rounded-lg"><i data-lucide="file-text" class="w-6 h-6"></i></div>
+                                    <div><h4 class="font-bold text-xs text-gruvbox-fg0">LemonPad</h4><p class="text-[10px] text-gruvbox-gray">Text Editor</p></div>
+                                </div>
+                                <div onclick="openApp('audio')" class="bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-aqua p-4 rounded-xl cursor-pointer transition flex items-center space-x-3">
+                                    <div class="p-3 bg-gruvbox-aqua/20 text-gruvbox-aqua rounded-lg"><i data-lucide="music" class="w-6 h-6"></i></div>
+                                    <div><h4 class="font-bold text-xs text-gruvbox-fg0">Lemon Amp</h4><p class="text-[10px] text-gruvbox-gray">Audio Player</p></div>
+                                </div>
+                                <div onclick="openApp('games')" class="bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-green p-4 rounded-xl cursor-pointer transition flex items-center space-x-3">
+                                    <div class="p-3 bg-gruvbox-green/20 text-gruvbox-green rounded-lg"><i data-lucide="gamepad-2" class="w-6 h-6"></i></div>
+                                    <div><h4 class="font-bold text-xs text-gruvbox-fg0">Games Hub</h4><p class="text-[10px] text-gruvbox-gray">Arcade</p></div>
+                                </div>
+                                <div onclick="openApp('calculator')" class="bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-purple p-4 rounded-xl cursor-pointer transition flex items-center space-x-3">
+                                    <div class="p-3 bg-gruvbox-purple/20 text-gruvbox-purple rounded-lg"><i data-lucide="calculator" class="w-6 h-6"></i></div>
+                                    <div><h4 class="font-bold text-xs text-gruvbox-fg0">Calculator</h4><p class="text-[10px] text-gruvbox-gray">Math Utility</p></div>
+                                </div>
+                                <div onclick="openApp('monitor')" class="bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-red p-4 rounded-xl cursor-pointer transition flex items-center space-x-3">
+                                    <div class="p-3 bg-gruvbox-red/20 text-gruvbox-red rounded-lg"><i data-lucide="activity" class="w-6 h-6"></i></div>
+                                    <div><h4 class="font-bold text-xs text-gruvbox-fg0">System Monitor</h4><p class="text-[10px] text-gruvbox-gray">htop & metrics</p></div>
+                                </div>
+                                <div onclick="openApp('settings')" class="bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-gray p-4 rounded-xl cursor-pointer transition flex items-center space-x-3">
+                                    <div class="p-3 bg-gruvbox-gray/20 text-gruvbox-gray rounded-lg"><i data-lucide="settings" class="w-6 h-6"></i></div>
+                                    <div><h4 class="font-bold text-xs text-gruvbox-fg0">Settings</h4><p class="text-[10px] text-gruvbox-gray">OS Configuration</p></div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                case 'tiling':
+                    return `
+                        <div class="flex flex-col h-full p-6 space-y-6">
+                            <h2 class="text-base font-bold text-gruvbox-orange flex items-center space-x-2">
+                                <i data-lucide="columns" class="w-5 h-5"></i>
+                               <span>Window Tiling Manager</span>
+                            </h2>
+                            <p class="text-xs text-gruvbox-gray">Organize your workspace automatically with advanced tiling layouts.</p>
+                            <div class="grid grid-cols-3 gap-4">
+                                <button onclick="toggleTilingMode('grid')" class="p-4 bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-orange rounded-xl text-center transition">
+                                    <i data-lucide="grid" class="w-8 h-8 text-gruvbox-orange mx-auto mb-2"></i>
+                                    <span class="font-bold text-xs text-gruvbox-fg0">Grid Layout</span>
+                                </button>
+                                <button onclick="toggleTilingMode('columns')" class="p-4 bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-blue rounded-xl text-center transition">
+                                    <i data-lucide="columns" class="w-8 h-8 text-gruvbox-blue mx-auto mb-2"></i>
+                                    <span class="font-bold text-xs text-gruvbox-fg0">Columns</span>
+                                </button>
+                                <button onclick="recalculateTiling()" class="p-4 bg-gruvbox-bg1 border border-gruvbox-bg2 hover:border-gruvbox-green rounded-xl text-center transition">
+                                    <i data-lucide="refresh-cw" class="w-8 h-8 text-gruvbox-green mx-auto mb-2"></i>
+                                    <span class="font-bold text-xs text-gruvbox-fg0">Retile Windows</span>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                case 'settings':
+                    return `
+                        <div class="flex h-full">
+                            <div class="w-48 bg-gruvbox-bg1/60 border-r border-gruvbox-bg2 p-3 space-y-1 text-xs">
+                                <div class="font-bold text-gruvbox-gray px-2 py-1">System</div>
+                                <div class="px-2 py-1.5 rounded bg-gruvbox-bg2 text-gruvbox-fg0 font-medium cursor-pointer">Appearance</div>
+                                <div class="px-2 py-1.5 rounded hover:bg-gruvbox-bg2 text-gruvbox-gray cursor-pointer">Network & Proxy</div>
+                                <div class="px-2 py-1.5 rounded hover:bg-gruvbox-bg2 text-gruvbox-gray cursor-pointer">Audio</div>
+                            </div>
+                            <div class="flex-1 p-6 space-y-6 overflow-y-auto">
+                                <h3 class="text-sm font-bold text-gruvbox-fg0">Appearance & Theme Settings</h3>
+                                <div class="space-y-3">
+                                    <label class="text-xs text-gruvbox-gray font-bold">Theme Presets</label>
+                                    <div class="grid grid-cols-3 gap-3">
+                                        <button onclick="applyTheme('gruvbox-dark')" class="p-3 bg-[#282828] border border-gruvbox-orange rounded-lg text-xs font-bold text-[#fbf1c7]">Gruvbox</button>
+                                        <button onclick="applyTheme('catppuccin')" class="p-3 bg-[#1e1e2e] border border-gruvbox-blue rounded-lg text-xs font-bold text-[#cdd6f4]">Catppuccin</button>
+                                        <button onclick="applyTheme('tokyo')" class="p-3 bg-[#1a1b26] border border-gruvbox-aqua rounded-lg text-xs font-bold text-[#7aa2f7]">Tokyo Night</button>
+                                    </div>
+                                </div>
+                                <div class="space-y-3 pt-2">
+                                    <label class="text-xs text-gruvbox-gray font-bold">Glassmorphism Options</label>
+                                    <div class="flex items-center justify-between bg-gruvbox-bg1 p-3 rounded-lg border border-gruvbox-bg2">
+                                        <span class="text-xs">Blur Intensity</span>
+                                        <input type="range" min="0" max="40" value="16" oninput="updateGlassBlur(this.value)" class="w-32 accent-gruvbox-orange">
+                                    </div>
+                                    <div class="flex items-center justify-between bg-gruvbox-bg1 p-3 rounded-lg border border-gruvbox-bg2">
+                                        <span class="text-xs">Window Opacity</span>
+                                        <input type="range" min="20" max="100" value="85" oninput="updateGlassOpacity(this.value)" class="w-32 accent-gruvbox-orange">
+                                    </div>
+                                </div>
+                                <div class="space-y-3 pt-2 border-t border-gruvbox-bg2 mt-4 pt-4">
+                                    <label class="text-xs text-gruvbox-gray font-bold block mb-2">Wallpaper Customization</label>
+                                    <div class="grid grid-cols-3 gap-2 mb-3">
+                                        <button onclick="setPresetWallpaper('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=1200')" class="h-16 bg-cover bg-center rounded border border-gruvbox-bg2 hover:border-gruvbox-orange transition" style="background-image: url('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=200');"></button>
+                                        <button onclick="setPresetWallpaper('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1200')" class="h-16 bg-cover bg-center rounded border border-gruvbox-bg2 hover:border-gruvbox-orange transition" style="background-image: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=200');"></button>
+                                        <button onclick="setPresetWallpaper('https://images.unsplash.com/photo-1542831371-29b0f74f9713?q=80&w=1200')" class="h-16 bg-cover bg-center rounded border border-gruvbox-bg2 hover:border-gruvbox-orange transition" style="background-image: url('https://images.unsplash.com/photo-1542831371-29b0f74f9713?q=80&w=200');"></button>
+                                    </div>
+                                    <label class="text-xs text-gruvbox-gray">Upload Custom Image (Applies Globally)</label>
+                                    <input type="file" accept="image/*" onchange="handleWallpaperUpload(event)" class="w-full mt-2 text-xs text-gruvbox-gray file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-gruvbox-orange file:text-gruvbox-bg0 hover:file:bg-gruvbox-orange/80 cursor-pointer">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                case 'ai':
+                    return `
+                        <div class="flex flex-col h-full">
+                            <div class="p-3 bg-gruvbox-bg1 border-b border-gruvbox-bg2 flex items-center space-x-2 text-xs font-bold text-gruvbox-orange">
+                                <i data-lucide="sparkles" class="w-4 h-4"></i>
+                                <span>LemonAI Assistant (Omarch Engine)</span>
+                            </div>
+                            <div class="flex-1 p-4 overflow-y-auto space-y-3 font-mono text-xs" id="ai-chat-${winId}">
+                                <div class="bg-gruvbox-bg1 p-3 rounded-xl border border-gruvbox-bg2">
+                                    <p class="text-gruvbox-orange font-bold">LemonAI:</p>
+                                    <p class="text-gruvbox-fg0 mt-1">Hello! I am your Debian assistant. How can I help you customize LemonOS or write code today?</p>
+                                </div>
+                            </div>
+                            <div class="p-3 bg-gruvbox-bg1 border-t border-gruvbox-bg2 flex space-x-2">
+                                <input type="text" id="ai-input-${winId}" placeholder="Ask LemonAI anything..." class="flex-1 bg-gruvbox-bg0 border border-gruvbox-bg2 px-3 py-2 rounded text-xs text-gruvbox-fg0 outline-none font-mono" onkeydown="if(event.key==='Enter') sendAiMessage('${winId}')">
+                                <button onclick="sendAiMessage('${winId}')" class="bg-gruvbox-orange text-gruvbox-bg0 px-4 py-2 rounded text-xs font-bold hover:bg-gruvbox-orange/80">Send</button>
+                            </div>
+                        </div>
+                    `;
+                case 'calculator':
+                    return `
+                        <div class="flex flex-col h-full p-4 justify-between">
+                            <div class="bg-gruvbox-bg1 p-4 rounded-xl text-right font-mono text-2xl font-bold text-gruvbox-yellow" id="calc-display">0</div>
+                            <div class="grid grid-cols-4 gap-2">
+                                <button onclick="calcPress('C')" class="p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-red font-bold">C</button>
+                                <button onclick="calcPress('/')" class="p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-orange font-bold">/</button>
+                                <button onclick="calcPress('*')" class="p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-orange font-bold">*</button>
+                                <button onclick="calcPress('-')" class="p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-orange font-bold">-</button>
+                                <button onclick="calcPress('7')" class="p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-fg0 font-bold">7</button>
+                                <button onclick="calcPress('8')" class="p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-fg0 font-bold">8</button>
+                                <button onclick="calcPress('9')" class="p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-fg0 font-bold">9</button>
+                                <button onclick="calcPress('+')" class="p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-orange font-bold">+</button>
+                                <button onclick="calcPress('4')" class="p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-fg0 font-bold">4</button>
+                                <button onclick="calcPress('5')" class="p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-fg0 font-bold">5</button>
+                                <button onclick="calcPress('6')" class="p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-fg0 font-bold">6</button>
+                                <button onclick="calcPress('=')" class="row-span-2 p-3 bg-gruvbox-green rounded-lg text-gruvbox-bg0 font-bold flex items-center justify-center">=</button>
+                                <button onclick="calcPress('1')" class="p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-fg0 font-bold">1</button>
+                                <button onclick="calcPress('2')" class="p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-fg0 font-bold">2</button>
+                                <button onclick="calcPress('3')" class="p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-fg0 font-bold">3</button>
+                                <button onclick="calcPress('0')" class="col-span-2 p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-fg0 font-bold">0</button>
+                                <button onclick="calcPress('.')" class="p-3 bg-gruvbox-bg1 rounded-lg text-gruvbox-fg0 font-bold">.</button>
+                            </div>
+                        </div>
+                    `;
+                case 'monitor':
+                    return `
+                        <div class="flex flex-col h-full p-4 space-y-4 font-mono text-xs">
+                            <div class="flex justify-between items-center"><span class="font-bold text-gruvbox-green">CPU Usage</span><span class="text-gruvbox-yellow">14.2%</span></div>
+                            <div class="w-full bg-gruvbox-bg1 h-3 rounded-full overflow-hidden"><div class="bg-gruvbox-green h-full" style="width: 14.2%;"></div></div>
+                            <div class="flex justify-between items-center"><span class="font-bold text-gruvbox-blue">Memory (RAM)</span><span class="text-gruvbox-yellow">1.8 GB / 8.0 GB</span></div>
+                            <div class="w-full bg-gruvbox-bg1 h-3 rounded-full overflow-hidden"><div class="bg-gruvbox-blue h-full" style="width: 22.5%;"></div></div>
+                            <div class="border-t border-gruvbox-bg2 pt-2">
+                                <p class="text-gruvbox-gray font-bold mb-1">Active Debian Daemons:</p>
+                                <p class="text-gruvbox-aqua">systemd (PID 1) - running</p>
+                                <p class="text-gruvbox-aqua">cava-visualizer (PID 482) - running</p>
+                                <p class="text-gruvbox-aqua">lemon-compositor (PID 512) - running</p>
+                            </div>
+                        </div>
+                    `;
+                default:
+                    return `<div class="p-6 text-sm">App UI Loaded: ${appKey}</div>`;
+            }
+        }
+
+        // --- Browser Iframe Logic ---
+        function navigateBrowser(winId) {
+            const input = document.getElementById('browser-url-' + winId);
+            const iframe = document.getElementById('browser-iframe-' + winId);
+            let url = input.value.trim();
+            if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                url = 'https://' + url;
+            }
+            input.value = url;
+            iframe.src = url;
+        }
+
+        // --- Settings & Themes ---
+        function applyTheme(theme) {
+            currentTheme = theme;
+            const body = document.getElementById('os-body');
+            if (theme === 'gruvbox-dark') {
+                body.className = 'bg-gruvbox-bg0 text-gruvbox-fg1 h-screen w-screen relative flex flex-col justify-between';
+            } else if (theme === 'catppuccin') {
+                body.className = 'bg-[#1e1e2e] text-[#cdd6f4] h-screen w-screen relative flex flex-col justify-between';
+            } else if (theme === 'tokyo') {
+                body.className = 'bg-[#1a1b26] text-[#7aa2f7] h-screen w-screen relative flex flex-col justify-between';
+            }
+        }
+
+        function updateGlassBlur(val) {
+            document.documentElement.style.setProperty('--glass-blur', val + 'px');
+        }
+
+        function updateGlassOpacity(val) {
+            document.documentElement.style.setProperty('--glass-opacity', (val / 100).toString());
+        }
+
+        function handleWallpaperUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                document.getElementById('desktop-wallpaper').style.backgroundImage = 'url(' + url + ')';
+            }
+        }
+
+        // --- Terminal & VFS Logic ---
+        function resolvePath(cwd, arg) {
+            if (arg === '/') return '/';
+            if (arg.startsWith('/')) return arg.endsWith('/') && arg.length > 1 ? arg.slice(0, -1) : arg;
+            
+            let parts = cwd === '/' ? [] : cwd.split('/').filter(Boolean);
+            let argParts = arg.split('/').filter(Boolean);
+            
+            for (let p of argParts) {
+                if (p === '..') parts.pop();
+                else if (p !== '.') parts.push(p);
+            }
+            return '/' + parts.join('/');
+        }
+
+        function initTerminal(winId) {
+            const input = document.getElementById('term-input-' + winId);
+            if (input) input.focus();
+        }
+
+        function handleTerminalKey(e, winId) {
+            if (e.key !== 'Enter') return;
+            const input = e.target;
+            const output = document.getElementById('term-output-' + winId);
+            const cmdStr = input.value.trim();
+            if (!cmdStr) return;
+
+            const w = windows[winId];
+            let cwd = w.cwd;
+            const displayCwd = cwd === '/home/debian' ? '~' : cwd;
+
+            // Echo command
+            const pReq = document.createElement('p');
+            pReq.innerHTML = `<span class="text-gruvbox-green font-bold">debian@lemonos:${displayCwd}$</span> ${cmdStr}`;
+            output.appendChild(pReq);
+
+            const parts = cmdStr.split(' ');
+            const cmd = parts[0];
+            const arg = parts[1];
+
+            const pRes = document.createElement('p');
+            pRes.className = "text-gruvbox-fg0";
+
+            if (cmd === 'clear') {
+                output.innerHTML = '';
+            } else if (cmd === 'help') {
+                pRes.innerHTML = `Commands: <br>- <b>ls</b>, <b>cd</b>, <b>pwd</b>, <b>mkdir</b>, <b>touch</b>, <b>echo</b>, <b>whoami</b><br>- <b>apt list</b>, <b>apt install &lt;pkg&gt;</b><br>- <b>clear</b>, <b>help</b>`;
+            } else if (cmd === 'pwd') {
+                pRes.innerText = cwd;
+            } else if (cmd === 'whoami') {
+                pRes.innerText = 'debian';
+            } else if (cmd === 'ls') {
+                const dir = vfs[cwd];
+                if (dir && dir.children) {
+                    pRes.innerHTML = dir.children.map(c => {
+                        const childPath = cwd === '/' ? '/' + c : cwd + '/' + c;
+                        return vfs[childPath]?.type === 'dir' ? `<span class="text-gruvbox-blue font-bold">${c}</span>` : c;
+                    }).join('  ');
+                }
+            } else if (cmd === 'cd') {
+                if (!arg || arg === '~') {
+                    w.cwd = '/home/debian';
+                } else {
+                    const target = resolvePath(cwd, arg);
+                    if (vfs[target] && vfs[target].type === 'dir') {
+                        w.cwd = target;
+                    } else {
+                        pRes.innerText = `bash: cd: ${arg}: No such file or directory`;
+                    }
+                }
+            } else if (cmd === 'mkdir') {
+                if (arg) {
+                    const target = resolvePath(cwd, arg);
+                    if (!vfs[target]) {
+                        vfs[target] = { type: 'dir', children: [] };
+                        vfs[cwd].children.push(arg.split('/').pop());
+                    } else {
+                        pRes.innerText = `mkdir: cannot create directory '${arg}': File exists`;
+                    }
+                }
+            } else if (cmd === 'touch') {
+                if (arg) {
+                    const target = resolvePath(cwd, arg);
+                    if (!vfs[target]) {
+                        vfs[target] = { type: 'file', content: '' };
+                        vfs[cwd].children.push(arg.split('/').pop());
+                    }
+                }
+            } else if (cmd === 'echo') {
+                pRes.innerText = parts.slice(1).join(' ');
+            } else if (cmd === 'apt') {
+                if (arg === 'install' && parts[2]) {
+                    const pkg = parts[2];
+                    if (installedPackages.includes(pkg)) {
+                        pRes.innerText = `${pkg} is already the newest version.`;
+                    } else {
+                        installedPackages.push(pkg);
+                        pRes.innerHTML = `Reading package lists... Done<br>Building dependency tree... Done<br>Unpacking <b>${pkg}</b>...<br>Setting up <b>${pkg}</b> ... Done.`;
+                    }
+                } else if (arg === 'list') {
+                    pRes.innerHTML = `Installed packages:<br>` + installedPackages.join('<br>');
+                } else {
+                    pRes.innerText = `Usage: apt install <package> | apt list`;
+                }
+            } else {
+                pRes.innerText = `bash: ${cmd}: command not found`;
+            }
+
+            if (cmd !== 'clear') output.appendChild(pRes);
+            input.value = '';
+
+            // Update prompt CWD
+            const newDisplayCwd = w.cwd === '/home/debian' ? '~' : w.cwd;
+            const cwdElement = document.getElementById('term-cwd-' + winId);
+            if (cwdElement) cwdElement.innerText = newDisplayCwd;
+
+            const termBox = document.getElementById('term-box-' + winId);
+            if (termBox) termBox.scrollTop = termBox.scrollHeight;
+        }
+
+        // --- File Manager Logic ---
+        function navigateFiles(winId, path) {
+            const pathBar = document.getElementById(`path-bar-${winId}`);
+            const grid = document.getElementById(`file-grid-${winId}`);
+            if (!pathBar || !grid) return;
+
+            pathBar.innerText = path;
+            grid.innerHTML = '';
+
+            const folder = vfs[path];
+            if (!folder || !folder.children) return;
+
+            folder.children.forEach(item => {
+                const isDir = item.indexOf('.') === -1;
+                const fullPath = path === '/' ? '/' + item : path + '/' + item;
+                const action = isDir ? `navigateFiles('${winId}', '${fullPath}')` : `openEditorWithFile('${fullPath}')`;
+                const el = document.createElement('div');
+                el.className = "flex flex-col items-center justify-center p-3 rounded-lg hover:bg-gruvbox-bg2/50 cursor-pointer group";
+                el.setAttribute('onclick', action);
+                el.innerHTML = `
+                    <i data-lucide="${isDir ? 'folder' : 'file-text'}" class="w-8 h-8 text-${isDir ? 'yellow' : 'aqua'} mb-1"></i>
+                    <span class="text-xs text-gruvbox-fg0 font-medium text-center truncate w-full">${item}</span>
+                `;
+                grid.appendChild(el);
+            });
+            lucide.createIcons();
+        }
+
+        function openEditorWithFile(path) {
+            openApp('editor');
+            setTimeout(() => {
+                const file = vfs[path];
+                const editWinId = Object.keys(windows).find(id => windows[id].appKey === 'editor');
+                if (editWinId && file) {
+                    document.getElementById(`editor-filename-${editWinId}`).innerText = path.split('/').pop();
+                    document.getElementById(`editor-textarea-${editWinId}`).value = file.content;
+                }
+            }, 150);
+        }
+
+        // --- Audio Player Logic ---
+        let audioPlaying = false;
+        let audioTimer = null;
+
+        function initAudioPlayer(winId) {
+            const container = document.getElementById('cava-visualizer');
+            if (!container) return;
+            container.innerHTML = '';
+            for (let i = 0; i < 40; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'w-[6px] rounded-t transition-all duration-75';
+                bar.style.background = 'linear-gradient(to top, #d65d0e, #d79921, #98971a, #458588)';
+                bar.style.height = '10%';
+                container.appendChild(bar);
+            }
+        }
+
+        function toggleAudioPlay() {
+            audioPlaying = !audioPlaying;
+            const btn = document.getElementById('audio-play-btn');
+            if (btn) {
+                btn.innerHTML = audioPlaying ? '<i data-lucide="pause" class="w-6 h-6 fill-current"></i>' : '<i data-lucide="play" class="w-6 h-6 fill-current"></i>';
+                lucide.createIcons();
+            }
+
+            if (audioPlaying) {
+                audioTimer = setInterval(() => {
+                    const bars = document.querySelectorAll('#cava-visualizer > div');
+                    bars.forEach(bar => {
+                        const h = Math.floor(Math.random() * 85) + 15;
+                        bar.style.height = h + '%';
+                    });
+                }, 80);
+            } else {
+                clearInterval(audioTimer);
+                const bars = document.querySelectorAll('#cava-visualizer > div');
+                bars.forEach(bar => bar.style.height = '10%');
+            }
+        }
+
+        function handleAudioUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                alert(`Loaded audio track: ${file.name}`);
+            }
+        }
+
+        // --- Games Engine Logic ---
+        function launchGame(gameKey) {
+            const gameWinId = 'win-' + Math.random().toString(36).substr(2, 9);
+            zIndexCounter++;
+            const spec = { title: 'Lemon Arcade - ' + gameKey.toUpperCase(), icon: 'gamepad-2', width: 650, height: 480 };
+
+            windows[gameWinId] = {
+                id: gameWinId,
+                appKey: 'custom-game',
+                title: spec.title,
+                icon: spec.icon,
+                x: (window.innerWidth - spec.width) / 2,
+                y: (window.innerHeight - spec.height) / 2,
+                width: spec.width,
+                height: spec.height,
+                minimized: false,
+                maximized: false,
+                zIndex: zIndexCounter,
+                cwd: '/home/debian'
+            };
+
+            const container = document.getElementById('window-container');
+            const winEl = document.createElement('div');
+            winEl.id = gameWinId;
+            winEl.className = `absolute glass-window rounded-xl flex flex-col overflow-hidden shadow-2xl pointer-events-auto window-transition`;
+            winEl.style.width = spec.width + 'px';
+            winEl.style.height = spec.height + 'px';
+            winEl.style.left = windows[gameWinId].x + 'px';
+            winEl.style.top = windows[gameWinId].y + 'px';
+            winEl.style.zIndex = windows[gameWinId].zIndex;
+
+            winEl.innerHTML = `
+                <div class="h-9 bg-gruvbox-bg1/80 border-b border-gruvbox-bg2 flex items-center justify-between px-3 cursor-move" onmousedown="startDrag(event, '${gameWinId}')">
+                    <div class="flex items-center space-x-2">
+                        <button onclick="closeWindow('${gameWinId}')" class="w-3 h-3 rounded-full bg-gruvbox-red hover:opacity-80 transition"></button>
+                        <button onclick="minimizeWindow('${gameWinId}')" class="w-3 h-3 rounded-full bg-gruvbox-yellow hover:opacity-80 transition"></button>
+                        <button onclick="maximizeWindow('${gameWinId}')" class="w-3 h-3 rounded-full bg-gruvbox-green hover:opacity-80 transition"></button>
+                    </div>
+                    <div class="flex items-center space-x-2 text-xs font-semibold text-gruvbox-fg0">
+                        <i data-lucide="gamepad-2" class="w-3.5 h-3.5 text-gruvbox-green"></i>
+                        <span>${spec.title}</span>
+                    </div>
+                    <div class="w-12"></div>
+                </div>
+                <div class="flex-1 bg-black relative flex items-center justify-center overflow-hidden" id="game-canvas-container-${gameWinId}">
+                    <canvas id="canvas-${gameWinId}" width="600" height="400" class="bg-gruvbox-bg0 border border-gruvbox-bg2 rounded shadow"></canvas>
+                </div>
+            `;
+
+            container.appendChild(winEl);
+            lucide.createIcons();
+            focusWindow(gameWinId);
+
+            setTimeout(() => initGameEngine(gameKey, `canvas-${gameWinId}`), 50);
+        }
+
+        function initGameEngine(gameKey, canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            if (gameKey === 'jetpack') {
+                let y = 200, vy = 0, score = 0;
+                const gravity = 0.6;
+                let active = true;
+
+                window.addEventListener('keydown', (e) => {
+                    if (e.code === 'Space') vy = -10;
+                });
+
+                function loop() {
+                    if (!active) return;
+                    vy += gravity;
+                    y += vy;
+                    if (y > 380) { y = 380; vy = 0; }
+                    if (y < 10) { y = 10; vy = 0; }
+
+                    score++;
+                    ctx.fillStyle = '#282828';
+                    ctx.fillRect(0, 0, 600, 400);
+
+                    // Draw player
+                    ctx.fillStyle = '#d79921';
+                    ctx.fillRect(50, y, 20, 20);
+
+                    ctx.fillStyle = '#ebdbb2';
+                    ctx.font = '12px JetBrains Mono';
+                    ctx.fillText(`Score: ${score}`, 20, 30);
+
+                    requestAnimationFrame(loop);
+                }
+                loop();
+            } else if (gameKey === 'snake') {
+                let snake = [{x: 10, y: 10}];
+                let dx = 1, dy = 0, food = {x: 15, y: 15}, score = 0;
+
+                window.addEventListener('keydown', e => {
+                    if (e.key === 'ArrowUp' && dy === 0) { dx = 0; dy = -1; }
+                    if (e.key === 'ArrowDown' && dy === 0) { dx = 0; dy = 1; }
+                    if (e.key === 'ArrowLeft' && dx === 0) { dx = -1; dy = 0; }
+                    if (e.key === 'ArrowRight' && dx === 0) { dx = 1; dy = 0; }
+                });
+
+                const interval = setInterval(() => {
+                    const head = {x: snake[0].x + dx, y: snake[0].y + dy};
+                    snake.unshift(head);
+                    if (head.x === food.x && head.y === food.y) {
+                        score += 10;
+                        food = {x: Math.floor(Math.random() * 30), y: Math.floor(Math.random() * 20)};
+                    } else {
+                        snake.pop();
+                    }
+
+                    ctx.fillStyle = '#282828';
+                    ctx.fillRect(0, 0, 600, 400);
+
+                    ctx.fillStyle = '#98971a';
+                    snake.forEach(s => ctx.fillRect(s.x * 20, s.y * 20, 18, 18));
+
+                    ctx.fillStyle = '#cc241d';
+                    ctx.fillRect(food.x * 20, food.y * 20, 18, 18);
+                }, 100);
+            }
+        }
+
+        // --- AI Logic ---
+        function sendAiMessage(winId) {
+            const input = document.getElementById(`ai-input-${winId}`);
+            const chat = document.getElementById(`ai-chat-${winId}`);
+            if (!input || !input.value.trim()) return;
+
+            const query = input.value.trim();
+            chat.innerHTML += `
+                <div class="bg-gruvbox-bg2/40 p-3 rounded-xl border border-gruvbox-bg2 ml-8">
+                    <p class="text-gruvbox-aqua font-bold">You:</p>
+                    <p class="text-gruvbox-fg0 mt-1">${query}</p>
+                </div>
+            `;
+            input.value = '';
+
+            setTimeout(() => {
+                chat.innerHTML += `
+                    <div class="bg-gruvbox-bg1 p-3 rounded-xl border border-gruvbox-bg2 mr-8">
+                        <p class="text-gruvbox-orange font-bold">LemonAI:</p>
+                        <p class="text-gruvbox-fg0 mt-1">I have analyzed your request in LemonOS. The iframe browser, terminal utilities, and wallpaper controls are active.</p>
+                    </div>
+                `;
+                chat.scrollTop = chat.scrollHeight;
+            }, 600);
+        }
+
+        // --- Calculator Logic ---
+        function calcPress(val) {
+            const display = document.getElementById('calc-display');
+            if (!display) return;
+            if (val === 'C') display.innerText = '0';
+            else if (val === '=') {
+                try { display.innerText = eval(display.innerText); } catch(e) { display.innerText = 'Error'; }
+            } else {
+                if (display.innerText === '0' || display.innerText === 'Error') display.innerText = val;
+                else display.innerText += val;
+            }
+        }
+
+        // --- Start Menu & Wallpaper ---
+        function toggleStartMenu() {
+            const menu = document.getElementById('start-menu');
+            if (menu.classList.contains('hidden')) {
+                menu.classList.remove('hidden');
+                menu.classList.add('flex');
+            } else {
+                menu.classList.add('hidden');
+                menu.classList.remove('flex');
+            }
+            lucide.createIcons();
+        }
+
+        function setPresetWallpaper(url) {
+            document.getElementById('desktop-wallpaper').style.backgroundImage = 'url(' + url + ')';
+        }
+
+        window.onload = initOS;
+    </script>
+</body>
+</html>
